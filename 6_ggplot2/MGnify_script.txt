@@ -1,0 +1,43 @@
+source("lib/variable_utils.r")
+
+# Add study accesion
+mgnify_study_accession <- get_variable_from_link_or_input('MGYS', 'Study Accession', 'MGYS00004006')
+
+# Call neccessary libraries
+library(vegan)
+library(ggplot2)
+library(phyloseq)
+library(MGnifyR)
+
+# Define cache
+mg <- mgnify_client(usecache = T, cache_dir = '/home/jovyan/.mgnify_cache')
+
+# Fetch a list of the Analyses for the Study
+analyses_accessions <- mgnify_analyses_from_studies(mg, mgnify_study_accession)
+analyses_accessions
+
+# Download metadata (for the first 10 Analyses)
+analyses_metadata_df <- mgnify_get_analyses_metadata(mg, analyses_accessions)
+analyses_metadata_df <- mgnify_get_analyses_metadata(mg, head(analyses_accessions,10)
+
+# Display metadata
+t(head(analyses_metadata_df))
+
+# Convert to Phyloseq
+analyses_ps <- mgnify_get_analyses_phyloseq(mg, analyses_metadata_df$analysis_accession, tax_SU = "SSU")
+
+# Plot two alpha diveristy indices, Chao1 richness and Shannon diversity. Color samples by sampling depth
+options(repr.plot.width=12, repr.plot.height=5)
+plot_richness(analyses_ps, measures=c("Chao1", "Shannon"), color = "sample_depth")
+
+# Plot abundance of phyla across different samples
+plot_bar(analyses_ps, fill = 'Phylum')
+
+# Plot Non-metric multidimensinal scaling based on Bray-Curtis distances
+analyses_ps.ord <- ordinate(analyses_ps, "NMDS", "bray")
+options(repr.plot.width=12, repr.plot.height=12)
+plot_ordination(analyses_ps, analyses_ps.ord, type="samples", label = "analysis_accession")
+
+# Perform Permutational multivariate analysis of vacriance
+distance_matrix <- phyloseq::distance(analyses_ps, method = "bray")
+adonis2(distance_matrix ~ sample_salinity + `sample_environment (feature)` + sample_depth, data = analyses_metadata_df, by = NULL)
