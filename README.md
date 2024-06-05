@@ -3,7 +3,7 @@
 Each person that was invited/ volunteered to present at our workshops is also invited to share the code/presentation used at the workshop. 
 To share your code please: 
 1. Request permission to the repostirory
-2. Pull the repository
+2. Clone the repository
 3. Add folder with:
      - README.md (short description for the folder)
      - code
