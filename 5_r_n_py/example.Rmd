@@ -1,0 +1,137 @@
+---
+title: "RLadies: Souporaba R in Python v RStudiu"
+subtitle: "Primerjava R paketa DESeq2 in implementacije v Pythonu (PyDESeq2)"
+author: "Žan Kuralt"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: cosmo
+    toc: yes
+    toc_float:
+      collapsed: true
+---
+
+# **DESeq2**
+
+Let's first load R packages
+```{r load r libraries, warning=FALSE, error=FALSE, message=FALSE}
+library(DESeq2)
+library(reticulate)
+library(EnhancedVolcano)
+```
+
+```{r importdata}
+rc <- read.table("raw_counts.tsv", header = TRUE, row.names = 1)
+meta <- read.table("metadata.tsv", header = TRUE, row.names = 1)
+```
+
+```{r deseq, include=FALSE}
+dds <- DESeqDataSetFromMatrix(
+  countData = rc,
+  colData = meta,
+  design = ~treatment
+)
+
+keep <- rowSums(counts(dds)) > 10
+dds <- dds[keep, ]
+
+dds <- DESeq(dds)
+
+results <- results(dds, alpha = 0.05)
+```
+
+# **pydeseq2**
+
+## Select virtual environment where python libraries are installed (by default this is "r-reticulate"). One can install packages using the py_install() function.
+
+The chunk below creates virtual environment and installs python libraries in there.
+```{r create venv and install libraries}
+if (!any(virtualenv_list() %in% "RLadies")) {
+  virtualenv_create(envname = "RLadies", packages = c("pandas", "pydeseq2"))
+}
+```
+
+```{r activate_venv, warning=FALSE}
+use_virtualenv("RLadies")
+```
+
+## Load libraries
+
+```{python import libs}
+import os
+
+import pandas as pd
+
+from pydeseq2.dds import DeseqDataSet
+from pydeseq2.default_inference import DefaultInference
+from pydeseq2.ds import DeseqStats
+```
+
+## Import objects created in R (above). Filter counts data by the same threshold (> 10) as was used in R implementation *DESeq2*.
+
+```{python prepare py data}
+counts_df = pd.DataFrame(r.rc.T) # r["rc"] works as well.
+meta = pd.DataFrame(r.meta)
+
+genes_to_keep = counts_df.columns[counts_df.sum(axis = 0) > 10]
+counts_df_filtrd = counts_df[genes_to_keep]
+```
+
+## **pydeseq2** 
+
+```{python pydeseq2}
+inference = DefaultInference(n_cpus=6)
+
+dds = DeseqDataSet(
+  counts=counts_df_filtrd,
+  metadata=meta,
+  design_factors="treatment",
+  inference=inference,
+  )
+  
+dds.deseq2()
+stat_res = DeseqStats(dds, alpha = 0.05, contrast = ["treatment", "JQ1", "DMSO"])
+  
+# After running the summary() command, results are stored in the .results_df dataframe.
+stat_res.summary()
+```
+  
+## Combine and compare results
+  
+```{r combine results}
+res_py <- DESeqResults(py$stat_res$results_df) # using py$ one can access objects created in python
+res_py <- as.data.frame(res_py)
+res_py$src <- "pydeseq2"
+
+res_r <- as.data.frame(results)
+res_r$src <- "DESeq2"
+
+combined_results <- rbind(res_py, res_r)
+```
+  
+## Vulcano plot
+  
+```{r vulcano}
+plt <- EnhancedVolcano(combined_results,
+  lab = rownames(combined_results),
+  x = "log2FoldChange",
+  y = "padj",
+  selectLab = c(""),
+  pCutoff = 10e-32,
+  FCcutoff = 1,
+  pointSize = 2.0,
+  labSize = 4.0,
+  colAlpha = 0.6
+)
+plt1 <- plt +
+  theme(plot.subtitle = element_blank()) +
+  facet_wrap(~src)
+
+plt1
+```
+
+## Scatterplot
+
+```{r}
+plot(res_r$log2FoldChange, res_py$log2FoldChange)
+```

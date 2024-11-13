@@ -1,0 +1,5 @@
+"sample" "cell_line" "treatment" "resistant" "replicate"
+"SUM149_JQ1_12H_R2" "SUM149" "JQ1" 0 "R2"
+"SUM149_JQ1_12H_R1" "SUM149" "JQ1" 0 "R1"
+"SUM149_DMSO_12H_R2" "SUM149" "DMSO" 0 "R2"
+"SUM149_DMSO_12H_R1" "SUM149" "DMSO" 0 "R1"
