@@ -12,7 +12,7 @@ To share your code, please:
      - ...
 4. Push to main
 
-   # For any questions, contact us on SLACK https://join.slack.com/t/rkoholiki/shared_invite/zt-2ke828lsx-LfnEa4LNGZrxMVgdZilcoQ
+   # For any questions, contact us on Discord: [https://discord.gg/GtzwEpaRmD]
    
 
 
